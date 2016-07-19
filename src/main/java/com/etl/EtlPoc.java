@@ -1,23 +1,5 @@
 package com.etl;
 
-/**
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 
 import com.clicktale.data.PageViewRecord;
 import com.clicktale.utils.Utils;
@@ -92,21 +74,23 @@ public class EtlPoc {
         properties.setProperty("group.id", "flink-group");
         //  properties.setProperty("partition.assignment.strategy", "roundrobin ");
 
-        //DataStream<String> stream = env.addSource(new FlinkKafkaConsumer08<>("flink-topic1", new SimpleStringSchema(), properties));
+        // read data stream from kafka queue
         DataStream<PageViewRecord> allEvents = env.addSource(new FlinkKafkaConsumer08<PageViewRecord>("flink-topic5", new PageViewRecordSchema(), properties));
 
-        RollingSink allEventsSink = new RollingSink<String>( allEventsFolder );
+        // All events: business logic for stream that save all data to files on disk ---------------------
 
+        RollingSink allEventsSink = new RollingSink<String>( allEventsFolder );
         allEventsSink.setBucketer(new DateTimeBucketer("yyyy-MM-dd--HHmm"));
         allEventsSink.setWriter(new StringWriter<PageViewRecord>());
-
         allEvents.addSink( allEventsSink );
 
         // end of all events processing -------------------------------------------------------------------
-        // only page view events
+
+
+        // Selective events: logic to save only selected events
 
         DataStream<PageViewRecord> pageViewEvents = allEvents
-                // filter out rides that do not start or stop in NYC
+                // filter out events of type == 1
                 .filter( new PageViewFilter() );
        // pageViewEvents.print();
 
